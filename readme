@@ -1,0 +1,24 @@
+# Sistema de Gestión de Garantías de Computadoras
+
+Este proyecto es una aplicación de consola escrita en Java para gestionar el proceso de reparación de computadoras bajo garantía. Permite registrar equipos, moverlos entre diferentes fases del proceso de reparación, y visualizar su historial y estado actual.
+
+## Características
+
+- Registro de computadoras con datos del cliente.
+- Flujo por fases: Recepción → Inspección → Reparación → Control de Calidad → Entrega.
+- Historial detallado por equipo.
+- Guardado y carga automática del historial desde archivo (`historial_computadoras.txt`).
+- Interfaz simple por consola.
+
+## Requisitos
+
+- Java 8 o superior
+- Sistema operativo compatible con consola (Windows, macOS, Linux)
+
+## Estructura del proceso
+
+1. **Recepción**: Se registra una computadora nueva.
+2. **Inspección**: Se diagnostica el problema (si es "FAIL", pasa a reparación; si es "OK", va directo a entrega).
+3. **Reparación**: Se asigna un técnico y se describe el proceso de reparación.
+4. **Control de Calidad**: Se valida si la reparación fue exitosa.
+5. **Entrega**: Se entrega al cliente.
