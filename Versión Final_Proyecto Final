@@ -1,0 +1,296 @@
+import java.io.*;
+import java.time.LocalDate;
+import java.util.*;
+
+public class ProyectoFinal {
+    static class Computadora {
+        String serviceTag;
+        String descripcionProblema;
+        LocalDate fechaRecepcion;
+        String nombreCliente;
+        String correoCliente;
+        String telefonoCliente;
+        String diagnostico = "";
+        String tecnico = "";
+        String procesoReparacion = "";
+        List<String> historial = new ArrayList<>();
+
+        public Computadora(String tag, String problema, LocalDate fecha, String nombre, String correo, String telefono) {
+            this.serviceTag = tag;
+            this.descripcionProblema = problema;
+            this.fechaRecepcion = fecha;
+            this.nombreCliente = nombre;
+            this.correoCliente = correo;
+            this.telefonoCliente = telefono;
+            historial.add("Recepcion: " + fecha.toString());
+        }
+
+        @Override
+        public String toString() {
+            return "Tag: " + serviceTag + ", Cliente: " + nombreCliente + ", Estado actual: " + historial.get(historial.size() - 1);
+        }
+    }
+
+    static Queue<Computadora> recepcion = new LinkedList<>();
+    static Queue<Computadora> inspeccion = new LinkedList<>();
+    static Queue<Computadora> reparacion = new LinkedList<>();
+    static Queue<Computadora> controlCalidad = new LinkedList<>();
+    static Queue<Computadora> entrega = new LinkedList<>();
+    static List<Computadora> historialGlobal = new ArrayList<>();
+
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        int opcion;
+
+        limpiarConsola();
+        cargarHistorial();
+
+        do {
+            limpiarConsola();
+            System.out.println("\n--- MENÚ DEL SISTEMA DE GARANTÍAS ---");
+            System.out.println("1. Registrar computadora nueva");
+            System.out.println("2. Mover computadora entre fases");
+            System.out.println("3. Mostrar historial");
+            System.out.println("4. Mostrar estado actual");
+            System.out.println("5. Salir");
+            System.out.print("Seleccione una opción: ");
+
+            try {
+                opcion = Integer.parseInt(sc.nextLine());
+                switch (opcion) {
+                    case 1:
+                        registrarComputadora(sc);
+                        break;
+                    case 2:
+                        moverComputadora(sc);
+                        break;
+                    case 3:
+                        mostrarHistorial(sc);
+                        break;
+                    case 4:
+                        mostrarEstado(sc);
+                        break;
+                    case 5:
+                        guardarHistorial();
+                        System.out.println("Saliendo del sistema...");
+                        break;
+                    default:
+                        System.out.println("Opción no válida");
+                        break;
+                }
+            } catch (NumberFormatException e) {
+                System.out.println("Error: Entrada no válida. Intente nuevamente.");
+                opcion = 0;
+            }
+        } while (opcion != 5);
+    }
+
+    static void registrarComputadora(Scanner sc) {
+        limpiarConsola();
+        try {
+            String tag;
+            do {
+                System.out.print("Service Tag: ");
+                tag = sc.nextLine().trim();
+                if (tag.isEmpty()) System.out.println("Este campo es obligatorio.");
+            } while (tag.isEmpty());
+
+            final String tagFinal = tag;
+
+            boolean tagExistente = historialGlobal.stream()
+            .anyMatch(c -> c.serviceTag.equalsIgnoreCase(tagFinal));
+            if (tagExistente) {
+            System.out.println("Error: Ya existe una computadora con ese Service Tag.");
+            presioneEnterParaContinuar(sc);
+            return;
+            }
+
+            String desc;
+            do {
+                System.out.print("Descripción del problema: ");
+                desc = sc.nextLine().trim();
+                if (desc.isEmpty()) System.out.println("Este campo es obligatorio.");
+            } while (desc.isEmpty());
+
+            LocalDate fecha = null;
+            while (fecha == null) {
+                try {
+                    System.out.print("Fecha de recepción (YYYY-MM-DD): ");
+                    String fechaInput = sc.nextLine().trim();
+                    fecha = LocalDate.parse(fechaInput);
+                } catch (Exception e) {
+                    System.out.println("Formato de fecha inválido. Intente nuevamente.");
+                }
+            }
+
+            String nombre;
+            do {
+                System.out.print("Nombre del cliente: ");
+                nombre = sc.nextLine().trim();
+                if (nombre.isEmpty()) System.out.println("Este campo es obligatorio.");
+            } while (nombre.isEmpty());
+
+            String correo;
+            do {
+                System.out.print("Correo del cliente: ");
+                correo = sc.nextLine().trim();
+                if (correo.isEmpty()) System.out.println("Este campo es obligatorio.");
+            } while (correo.isEmpty());
+
+            String telefono;
+            do {
+                System.out.print("Teléfono del cliente: ");
+                telefono = sc.nextLine().trim();
+                if (telefono.isEmpty()) System.out.println("Este campo es obligatorio.");
+            } while (telefono.isEmpty());
+
+            Computadora comp = new Computadora(tag, desc, fecha, nombre, correo, telefono);
+            recepcion.add(comp);
+            historialGlobal.add(comp);
+            System.out.println("Computadora registrada y encolada a recepción.");
+        } catch (Exception e) {
+            System.out.println("Error al registrar computadora. Verifique los datos ingresados.");
+        }
+        presioneEnterParaContinuar(sc);
+    }
+
+    static void moverComputadora(Scanner sc) {
+        limpiarConsola();
+        try {
+            if (!recepcion.isEmpty()) {
+                Computadora comp = recepcion.poll();
+                inspeccion.add(comp);
+                comp.historial.add("Inspección: " + LocalDate.now());
+                System.out.println("Movida a Inspección: " + comp);
+            } else if (!inspeccion.isEmpty()) {
+                Computadora comp = inspeccion.poll();
+                System.out.print("Diagnóstico (FAIL para reparar, OK para entrega): ");
+                String diag = sc.nextLine();
+                comp.diagnostico = diag;
+                comp.historial.add("Diagnóstico: " + diag);
+                if (diag.equalsIgnoreCase("FAIL")) {
+                    reparacion.add(comp);
+                    comp.historial.add("A Reparación: " + LocalDate.now());
+                } else {
+                    entrega.add(comp);
+                    comp.historial.add("A Entrega sin reparar: " + LocalDate.now());
+                }
+            } else if (!reparacion.isEmpty()) {
+                Computadora comp = reparacion.poll();
+                System.out.print("Nombre del técnico: ");
+                comp.tecnico = sc.nextLine();
+                System.out.print("Proceso realizado: ");
+                comp.procesoReparacion = sc.nextLine();
+                controlCalidad.add(comp);
+                comp.historial.add("Reparada por " + comp.tecnico);
+            } else if (!controlCalidad.isEmpty()) {
+                Computadora comp = controlCalidad.poll();
+                System.out.print("¿Reparación correcta? (SI/NO): ");
+                String result = sc.nextLine();
+                if (result.equalsIgnoreCase("SI")) {
+                    entrega.add(comp);
+                    comp.historial.add("Control calidad OK");
+                } else {
+                    reparacion.add(comp);
+                    comp.historial.add("Rechazada por control de calidad");
+                }
+            } else if (!entrega.isEmpty()) {
+                Computadora comp = entrega.poll();
+                comp.historial.add("Entregada al cliente: " + LocalDate.now());
+
+                System.out.println("\n--- Entrega Final ---");
+                System.out.println("Service Tag: " + comp.serviceTag);
+                System.out.println("Cliente: " + comp.nombreCliente);
+                System.out.println("Diagnóstico: " + comp.diagnostico);
+                System.out.println("Técnico: " + comp.tecnico);
+                System.out.println("Proceso de reparación: " + comp.procesoReparacion);
+                System.out.println("Estado final: " + comp.historial.get(comp.historial.size() - 1));
+            }
+            else {
+                System.out.println("No hay computadoras en proceso.");
+            }
+        } catch (Exception e) {
+            System.out.println("Error al mover computadora.");
+        }
+        presioneEnterParaContinuar(sc);
+    }
+
+    static void mostrarHistorial(Scanner sc) {
+        limpiarConsola();
+        for (Computadora c : historialGlobal) {
+            System.out.println("\nComputadora: " + c.serviceTag);
+            for (String evento : c.historial) {
+                System.out.println(" - " + evento);
+            }
+        }
+        presioneEnterParaContinuar(sc);
+    }
+
+    static void mostrarEstado(Scanner sc) {
+        limpiarConsola();
+        System.out.println("\nRecepción: " + recepcion.size());
+        System.out.println("Inspección: " + inspeccion.size());
+        System.out.println("Reparación: " + reparacion.size());
+        System.out.println("Control de Calidad: " + controlCalidad.size());
+        System.out.println("Entrega: " + entrega.size());
+        presioneEnterParaContinuar(sc);
+    }
+
+    static void guardarHistorial() {
+        try (PrintWriter writer = new PrintWriter("historial_computadoras.txt")) {
+            for (Computadora c : historialGlobal) {
+                writer.println(c.serviceTag + ";" + c.descripcionProblema + ";" + c.fechaRecepcion + ";" + c.nombreCliente + ";" + c.correoCliente + ";" + c.telefonoCliente);
+                for (String h : c.historial) {
+                    writer.println("H:" + h);
+                }
+                writer.println("---");
+            }
+        } catch (IOException e) {
+            System.out.println("Error al guardar historial.");
+        }
+    }
+
+    static void cargarHistorial() {
+        File file = new File("historial_computadoras.txt");
+        if (!file.exists()) return;
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            Computadora comp = null;
+            while ((line = reader.readLine()) != null) {
+                if (line.equals("---")) {
+                    if (comp != null) historialGlobal.add(comp);
+                    comp = null;
+                } else if (line.startsWith("H:")) {
+                    if (comp != null) comp.historial.add(line.substring(2));
+                } else {
+                    String[] parts = line.split(";");
+                    if (parts.length >= 6) {
+                        comp = new Computadora(parts[0], parts[1], LocalDate.parse(parts[2]), parts[3], parts[4], parts[5]);
+                        recepcion.add(comp);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            System.out.println("Error al cargar historial previo.");
+        }
+    }
+
+    static void presioneEnterParaContinuar(Scanner sc) {
+        System.out.println("\nPresione ENTER para continuar...");
+        sc.nextLine();
+    }
+
+    static void limpiarConsola() {
+        try {
+            if (System.getProperty("os.name").contains("Windows")) {
+                new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
+            } else {
+                System.out.print("\033[H\033[2J");
+                System.out.flush();
+            }
+        } catch (IOException | InterruptedException e) {
+            System.out.println("No se pudo limpiar la consola.");
+        }
+    }
+}
